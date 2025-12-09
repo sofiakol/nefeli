@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Νεφέλη v1 · LR Product Knowledge Demo</title>
+  <style>
+    :root{
+      --lr-green:#2f855a; /* primary */
+      --lr-green-600:#276749; /* darker */
+      --lr-mint:#e6f6ef; /* background tint */
+      --lr-gray:#4a5568; /* text */
+      --lr-border:#e2e8f0; /* borders */
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--lr-gray); background:#fff;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      display:flex; align-items:center; gap:16px;
+      padding:14px 18px; border-bottom:1px solid var(--lr-border);
+      background:#fffcc; background:linear-gradient(180deg, #fff 0%, #fff 65%, #fafafa 100%);
+    }
+    .logo{display:flex; align-items:center; gap:10px;}
+    .logo-badge{width:38px; height:38px; border-radius:10px; background:var(--lr-mint); display:grid; place-items:center; color:var(--lr-green); font-weight:700; border:1px solid var(--lr-border)}
+    .logo h1{margin:0; font-size:18px; letter-spacing:.2px;}
+    .pill{
+      border:1px solid var(--lr-border); border-radius:999px; padding:6px 10px; background:#fff; display:flex; align-items:center; gap:8px;
+    }
+    .controls{margin-left:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+    select, button, input[type="text"]{
+      border:1px solid var(--lr-border); border-radius:10px; padding:8px 10px; font-size:14px; background:#fff;
+    }
+    button{cursor:pointer; background:var(--lr-green); color:#fff; border-color:var(--lr-green);}
+    button.secondary{background:#fff; color:var(--lr-green); border-color:var(--lr-green)}
+    main{display:grid; grid-template-columns: 1.1fr .9fr; gap:20px; padding:16px; align-items:start;}
+    @media (max-width: 980px){ main{grid-template-columns: 1fr;} .sidebar{order:-1} }
+
+    /* Chat */
+    .chat{
+      border:1px solid var(--lr-border); border-radius:var(--radius); overflow:hidden; background:#fff;
+      display:flex; flex-direction:column; height:70vh; min-height:480px;
+    }
+    .chat-header{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--lr-mint); border-bottom:1px solid var(--lr-border)}
+    .chat-body{flex:1; overflow:auto; padding:16px; scroll-behavior:smooth;}
+    .msg{display:flex; gap:10px; margin-bottom:14px;}
+    .msg .bubble{max-width:720px; padding:10px 12px; border-radius:12px; border:1px solid var(--lr-border);}
+    .msg.user{justify-content:flex-end}
+    .msg.user .bubble{background:#f7fafc}
+    .msg.bot .bubble{background:#fff}
+    .citations{margin-top:8px; font-size:12px; color:#718096}
+    .typing{display:none; gap:8px; align-items:center; color:#718096; font-size:13px;}
+    .typing.active{display:flex}
+    .dot{width:6px; height:6px; border-radius:50%; background:#a0aec0; animation:blink 1.2s infinite ease-in-out}
+    .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+    @keyframes blink{0%,80%,100%{opacity:.2} 40%{opacity:1}}
+    .chat-input{display:flex; gap:8px; padding:12px; border-top:1px solid var(--lr-border); background:#fff}
+    .chat-input input{flex:1}
+
+    /* Sidebar */
+    .sidebar{display:flex; flex-direction:column; gap:14px}
+    .card{border:1px solid var(--lr-border); border-radius:var(--radius); padding:14px; background:#fff}
+    .card h3{margin:0 0 8px 0; font-size:16px; color:var(--lr-green-600)}
+    .kvs{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+    .kv{border:1px solid var(--lr-border); border-radius:12px; padding:10px;}
+    .muted{color:#718096}
+    .tag{display:inline-block; padding:2px 8px; border:1px solid var(--lr-border); border-radius:999px; font-size:12px; margin-right:6px; color:#2d3748}
+    .hint{font-size:13px; color:#718096}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-badge">LR</div>
+      <h1>Νεφέλη v1 · LR Product Knowledge</h1>
+      <span class="pill" title="Brand voice">🌿 LR tone</span>
+    </div>
+    <div class="controls">
+      <label class="pill">Mode:
+        <select id="mode">
+          <option value="support">Support</option>
+          <option value="content">Content</option>
+        </select>
+      </label>
+      <label class="pill">Language:
+        <select id="lang">
+          <option value="el">Ελληνικά</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <button id="export" class="secondary" title="Εξαγωγή συνομιλίας">⬇️ Export</button>
+      <button id="clear" class="secondary" title="Καθαρισμός">🧹 Clear</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="chat" aria-label="Nefeli chat">
+      <div class="chat-header">
+        <div class="hint">Ρώτησε για Colostrum, Aloe Vera, Mind Master, Microsilver, Emergency/Concentrated.</div>
+        <div class="typing" id="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Νεφέλη πληκτρολογεί…</div>
+      </div>
+      <div id="chatBody" class="chat-body"></div>
+      <div class="chat-input">
+        <input id="input" type="text" placeholder="Γράψε την ερώτησή σου… (Enter)" autocomplete="off" />
+        <button id="send">Αποστολή</button>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="card">
+        <h3>Γρήγορες ερωτήσεις</h3>
+        <div class="kvs">
+          <button class="kv" data-q="Τι είναι το Colostrum;">Τι είναι το Colostrum;</button>
+          <button class="kv" data-q="Ποια είναι τα οφέλη της Aloe Vera;">Οφέλη Aloe Vera</button>
+          <button class="kv" data-q="Explain the scientific evidence behind Mind Master.">Mind Master (EN)</button>
+          <button class="kv" data-q="How does Microsilver work?">Microsilver (EN)</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Brand rules</h3>
+        <p class="muted">Χρησιμοποιούμε ασφαλή φρασεολογία: «υποστηρίζει», «συμβάλλει», «βοηθά». Αποφεύγουμε ιατρικούς ισχυρισμούς.</p>
+        <span class="tag">Citations on</span>
+        <span class="tag">LR Voice</span>
+        <span class="tag">EL/EN</span>
+      </div>
+      <div class="card">
+        <h3>How to deploy</h3>
+        <ol class="muted">
+          <li>Ανέβασε το αρχείο αυτό σε Netlify/Vercel/WordPress (HTML block).</li>
+          <li>Ορίσε endpoint στο <code>sendToBackend()</code> αν έχεις API.</li>
+          <li>Ή άφησε το <em>mock</em> να απαντά για demo.</li>
+        </ol>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // --- Minimal state & config ---
+    const S = {
+      storageKey: 'nefeli.v1.chat',
+      modeEl: document.getElementById('mode'),
+      langEl: document.getElementById('lang'),
+      input: document.getElementById('input'),
+      body: document.getElementById('chatBody'),
+      typing: document.getElementById('typing')
+    };
+
+    // Restore history
+    const saved = JSON.parse(localStorage.getItem(S.storageKey) || '[]');
+    for(const m of saved){ appendMsg(m.role, m.text, m.citations); }
+    if(saved.length===0){
+      appendMsg('bot', 'Γεια σου! Είμαι η Νεφέλη 🌿\nΡώτησέ με για προϊόντα LR ή ζήτησέ μου να δημιουργήσω περιεχόμενο.');
+    }
+
+    // Events
+    document.getElementById('send').onclick = onSend;
+    S.input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ onSend(); }});
+    document.getElementById('clear').onclick = ()=>{ localStorage.removeItem(S.storageKey); S.body.innerHTML=''; appendMsg('bot','Ιστορικό διαγράφηκε. Μπορούμε να συνεχίσουμε 🌿'); };
+    document.getElementById('export').onclick = exportChat;
+    document.querySelectorAll('.kv').forEach(b=> b.onclick = ()=>{ S.input.value=b.dataset.q; onSend(); });
+
+    async function onSend(){
+      const text = S.input.value.trim();
+      if(!text) return; S.input.value='';
+      const mode = S.modeEl.value; const lang = S.langEl.value;
+      appendMsg('user', text);
+      save();
+      toggleTyping(true);
+      try{
+        // 1) If you have backend: const res = await sendToBackend({text, mode, lang});
+        // 2) Else: use mock
+       // const res = await mockNefeli({text, mode, lang});
+        const res = await sendToBackend({ text, mode, lang });
+
+        appendMsg('bot', res.answer, res.citations);
+        save();
+      }catch(err){
+        appendMsg('bot', 'Σφάλμα απάντησης. Δοκίμασε ξανά ή άλλαξε διατύπωση.'); save();
+      }finally{ toggleTyping(false); }
+    }
+
+    function appendMsg(role, text, citations){
+      const row = document.createElement('div'); row.className = 'msg '+role;
+      const bubble = document.createElement('div'); bubble.className='bubble'; bubble.innerText = text;
+      row.appendChild(bubble);
+      if(role==='bot' && citations){
+        const c = document.createElement('div'); c.className='citations';
+        c.innerText = 'Πηγές: '+ citations.map(x=> x.title + (x.year? ' ('+x.year+')':'')) .join(' · ');
+        row.appendChild(c);
+      }
+      S.body.appendChild(row); S.body.scrollTop = S.body.scrollHeight;
+    }
+
+    function toggleTyping(on){ S.typing.classList.toggle('active', !!on); }
+
+    function save(){
+      const rows = [...S.body.querySelectorAll('.msg')].map(row=>({
+        role: row.classList.contains('user')? 'user':'bot',
+        text: row.querySelector('.bubble')?.innerText || '',
+        citations: null
+      }));
+      localStorage.setItem(S.storageKey, JSON.stringify(rows));
+    }
+
+    function exportChat(){
+      const data = localStorage.getItem(S.storageKey)||'[]';
+      const blob = new Blob([data], {type:'application/json'});
+      const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='nefeli-chat.json'; a.click();
+    }
+
+    // --- Backend placeholder ---
+    async function sendToBackend(payload){
+      // Example: change to your deployed API URL
+      //const API = '/api/nefeli';
+
+      //οταν ανεβει Live βαζουμε αυτο
+      //const API = 'https://your-domain.com/api/nefeli';
+
+      const API = 'https://nefeli-api.onrender.com/api/nefeli';
+
+
+
+//        local
+      //const API = 'http://localhost:3000/api/nefeli';
+
+      const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+      if(!r.ok) throw new Error('API error');
+      return r.json();
+    }
+
+    // --- Mock brain (for demo without backend) ---
+    async function mockNefeli({text, mode, lang}){
+      const t = text.toLowerCase();
+      if(mode==='content'){
+        if(t.includes('aloe')||t.includes('αλόη')){
+          return {
+            answer: (lang==='en')
+              ? 'Aloe Vera · Wellness post:\nBalance starts within. LR Aloe Vera Drinking Gel supports digestion and daily vitality. #LRHealth #AloeVera #Wellness'
+              : 'Aloe Vera · Wellness post:\nΗ ισορροπία ξεκινά από μέσα. Το LR Aloe Vera Drinking Gel υποστηρίζει την πέψη και την καθημερινή ζωντάνια. #LRHealth #AloeVera #Ευεξία',
+            citations: [ {title:'Martindale Pharmacopoeia', year:2018} ]
+          };
+        }
+        if(t.includes('colostrum')||t.includes('κολοστρ')){
+          return { answer:(lang==='en')?
+            'Colostrum · Slide bullets:\n• Supports innate immunity\n• Aids post‑exercise recovery\n• German quality · IFS/TÜV'
+            : 'Colostrum · Bullets για slide:\n• Υποστηρίζει τη φυσική άμυνα\n• Συμβάλλει στην αποκατάσταση μετά την άσκηση\n• Γερμανική ποιότητα · IFS/TÜV',
+            citations:[{title:'Harokopio University', year:2021}]
+          };
+        }
+        // default content
+        return { answer:(lang==='en')? 'Content mode ready. Ask for a post, caption or slide bullets.' : 'Έτοιμο για περιεχόμενο. Ζήτησε post, caption ή bullets για slides.', citations:[] };
+      }
+      // support mode
+      if(t.includes('colostrum')||t.includes('κολοστρ')){
+        return {
+          answer: (lang==='en')
+            ? 'LR Colostrum supports the body’s natural defenses and post‑exercise recovery. Use Direct (8 ml morning) or Compact (2 caps daily).'
+            : 'Το LR Colostrum υποστηρίζει τη φυσική άμυνα και την αποκατάσταση μετά την άσκηση. Χρήση: Direct 8 ml πρωί ή Compact 2 κάψουλες/ημέρα.',
+          citations:[
+            {title:'Harokopio University Study'},
+            {title:'European Journal of Nutrition'}
+          ]
+        };
+      }
+      if(t.includes('aloe')||t.includes('αλόη')){
+        return {
+          answer:(lang==='en')
+            ? 'Aloe Vera (Aloe barbadensis Miller) contains acemannan and >200 actives; supports digestive comfort and skin hydration.'
+            : 'Η Aloe Vera (Aloe barbadensis Miller) με ακεμαννάνη και >200 δραστικά υποστηρίζει την πεπτική άνεση και την ενυδάτωση του δέρματος.',
+          citations:[{title:'PAGNI Clinical Notes', year:2019},{title:'Phytother Res', year:2021}]
+        };
+      }
+      if(t.includes('mind master')){
+        return { answer:(lang==='en')?
+          'Mind Master: antioxidant support; Harokopio collaboration indicates reduced oxidative stress markers.'
+          : 'Mind Master: αντιοξειδωτική υποστήριξη· συνεργασία Χαροκοπείου δείχνει μείωση δεικτών οξειδωτικού στρες.',
+          citations:[{title:'Harokopio University'}]
+        };
+      }
+      if(t.includes('microsilver')){
+        return { answer:(lang==='en')?
+          'Microsilver: pure, non‑toxic silver particles with antimicrobial action for skin/oral care.'
+          : 'Microsilver: καθαρά, μη τοξικά σωματίδια αργύρου με αντιμικροβιακή δράση για δέρμα/στοματική φροντίδα.',
+          citations:[{title:'EKPA Dentistry Analysis'}]
+        };
+      }
+      if(t.includes('emergency')||t.includes('concentrated')){
+        return { answer:(lang==='en')?
+          'Aloe Vera Emergency Spray + Concentrated Cream: soothing care; used in case series for post‑procedure skin support.'
+          : 'Aloe Vera Emergency Spray + Concentrated Cream: καταπραϋντική φροντίδα· χρησιμοποιήθηκαν σε case series για υποστήριξη δέρματος μετά από επεμβάσεις.',
+          citations:[{title:'Case Series (Vlachogianni)'}]
+        };
+      }
+      return { answer:(lang==='en')? 'I can help with LR products, science and content. Try asking about Colostrum, Aloe Vera, Mind Master, Microsilver.' : 'Μπορώ να βοηθήσω για προϊόντα LR, επιστήμη και περιεχόμενο. Ρώτησέ με για Colostrum, Aloe Vera, Mind Master, Microsilver.', citations:[] };
+    }
+  </script>
+</body>
+</html>
