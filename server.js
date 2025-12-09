@@ -4,41 +4,39 @@ require("dotenv").config();
 
 const app = express();
 
-// SERVE STATIC FILES
-app.use(express.static(path.join(__dirname)));
+// TO ΣΩΣΤΟ — Render δίνει το port αυτόματα
+const PORT = process.env.PORT || 3000;
 
-// API ENDPOINT
 app.use(express.json());
+app.use(express.static(__dirname + "/public"));
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// ===== API ENDPOINT =====
 app.post("/api/nefeli", async (req, res) => {
   try {
     console.log("Received:", req.body);
 
-    const { text, mode, lang } = req.body;
-
-    // OPENAI CALL
     const openai = new (require("openai"))({ apiKey: process.env.OPENAI_API_KEY });
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [{ role: "user", content: text }]
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: req.body.text }]
     });
 
     res.json({
-      answer: completion.choices[0].message.content,
-      citations: []
+      answer: completion.choices[0].message.content
     });
 
   } catch (err) {
-    console.error("ERROR:", err);
-    res.status(500).json({ error: "OpenAI error" });
+    console.error(err);
+    res.status(500).json({ answer: "Error contacting the server." });
   }
 });
 
-// DEFAULT ROUTE → serve index.html
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Server running on port " + port));
